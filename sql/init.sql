@@ -7,13 +7,18 @@ create extension if not exists vector;
 -- Create reports table
 create table reports (
                          id uuid primary key default gen_random_uuid (),
-                         text text,
+                         complaint text,
                          tags text[],
                          embedding vector (3072), -- assuming OpenAI/Claude embeddings
                          location text,
-                         stop_name text,
+                         stop text,
                          agency text,
-                         route_id text,
+                         route text,
+                         temperature int,
+                         delay bool,
+                         weekday text,
+                         eventNearby text,
+                         is_anonymous bool,
                          created_at timestamptz default now()
 );
 
