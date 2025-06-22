@@ -67,6 +67,12 @@ export default function ChartsPage() {
     const agencyCounts = countBy(reports, 'agency');
     const timeCounts = groupByDate(reports);
 
+    const harassmentByDate = groupByDate(
+        reports.filter(r =>
+            Array.isArray(r.tags) ? r.tags.includes('harassment')
+                : r.tags === 'harassment')
+    );
+
     return (
         <Layout>
             <h1 className="text-2xl font-bold mb-6">📊 Transit Analytics</h1>
@@ -76,6 +82,18 @@ export default function ChartsPage() {
                     tag="harassment"
                     title="Harassment Reports by Stop"
                 />
+
+                <ChartByTagAndHour
+                    tag="harassment"
+                    title="Harassment Reports by Hour"
+                />
+
+                <div>
+                    <h2 className="text-xl font-semibold mb-2">
+                        Harassment Reports Over Time
+                    </h2>
+                    <Bar data={buildChartData(harassmentByDate, 'Harassment by Date')} />
+                </div>
 
                 <ChartByTagAndTemp
                     tag="equipment_issue"
