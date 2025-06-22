@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>Transit Feedback Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
 </head>
 <body>
 <h1>Submit Transit Feedback</h1>
@@ -13,7 +15,14 @@
     <input type="text" id="location" name="location"><br>
 
     <label for="agency">Agency:</label><br>
-    <input type="text" id="agency" name="agency"><br><br>
+    <select id="agency" name="agency" placeholder="Pick a transit agency">
+        <option value="">-- Select an agency --</option>
+        <option value="BART" data-url="/logos/bart.png">BART</option>
+        <option value="Muni Metro (SFMTA)" data-url="/logos/sfmta.png">Muni Metro (SFMTA)</option>
+        <option value="Caltrain" data-url="/logos/caltrain.png">Caltrain</option>
+        <option value="VTA" data-url="/logos/vta.png">VTA Light Rail & Buses</option>
+        <option value="Amtrak" data-url="/logos/amtrak.png">Amtrak</option>
+    </select>
 
     <button type="submit">Submit</button>
 </form>
@@ -69,6 +78,25 @@
             resultDiv.innerHTML = `<p style="color: red;">❌ Failed to submit report.</p>`;
         }
     });
+
+    new TomSelect("#agency", {
+        render: {
+        option: function(data, escape) {
+        return `<div>
+        <img src="${escape(data.url)}" style="height:20px;vertical-align:middle;margin-right:10px;">
+        ${escape(data.text)}
+      </div>`;
+    },
+        item: function(data, escape) {
+        return `<div>
+        <img src="${escape(data.url)}" style="height:20px;vertical-align:middle;margin-right:10px;">
+        ${escape(data.text)}
+      </div>`;
+    }
+    }
+    });
+</script>
+
 </script>
 
 </body>
