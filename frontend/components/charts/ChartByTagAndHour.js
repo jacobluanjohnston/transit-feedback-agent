@@ -1,8 +1,7 @@
 /* components/charts/ChartByTagAndHour.js
    ---------------------------------------------------------
-   Bar chart of reports by hour (weekday vs weekend) + Claude summary
-   • Hours are calculated in **UTC** so SQL counts line up.
-   • No annotation plugin to avoid crashes.
+   Hourly report counts (weekday vs weekend)  +  Claude insight
+   • Hours calculated in **UTC** so SQL buckets line up
 */
 
 import { useEffect, useState } from 'react';
@@ -15,8 +14,8 @@ import Markdown   from 'react-markdown';
 
 export default function ChartByTagAndHour({
                                               tag   = 'delay',
-                                              title = 'Harassment Reports by Hour',
-                                              days  // optional [0–6] filter
+                                              title = 'Delay Reports by Hour',
+                                              days  // optional array of weekdays [0-6]
                                           }) {
     const [dataMap, setDataMap] = useState({ weekday: {}, weekend: {} });
 
@@ -26,7 +25,7 @@ export default function ChartByTagAndHour({
                 .from('reports')
                 .select('created_at, tags');
 
-            if (error) { console.error(error); return; }
+            if (error) return console.error(error);
 
             const weekday = {}, weekend = {};
             (days ? data.filter(r => days.includes(new Date(r.created_at).getUTCDay())) : data)
@@ -35,10 +34,10 @@ export default function ChartByTagAndHour({
                         r.tags.some(t => t.toLowerCase() === tag.toLowerCase());
                     if (!tagged) return;
 
-                    const hr = new Date(r.created_at).getUTCHours();   // UTC hour
+                    const hr   = new Date(r.created_at).getUTCHours();
                     const isWE = [0, 6].includes(new Date(r.created_at).getUTCDay());
-                    const bucket = isWE ? weekend : weekday;
-                    bucket[hr] = (bucket[hr] || 0) + 1;
+                    const buk  = isWE ? weekend : weekday;
+                    buk[hr] = (buk[hr] || 0) + 1;
                 });
 
             setDataMap({ weekday, weekend });
@@ -49,27 +48,20 @@ export default function ChartByTagAndHour({
     const chartData = {
         labels: hours.map(h => `${h}:00`),
         datasets: [
-            {
-                label: 'Weekday',
-                data: hours.map(h => dataMap.weekday[h] || 0),
-                backgroundColor: 'rgba(54,162,235,0.7)',
-            },
-            {
-                label: 'Weekend',
-                data: hours.map(h => dataMap.weekend[h] || 0),
-                backgroundColor: 'rgba(201,203,207,0.7)',
-            },
+            { label: 'Weekday', data: hours.map(h => dataMap.weekday[h] || 0),
+                backgroundColor: 'rgba(54,162,235,0.7)' },
+            { label: 'Weekend', data: hours.map(h => dataMap.weekend[h] || 0),
+                backgroundColor: 'rgba(201,203,207,0.7)' },
         ],
     };
 
     const chartOpts = {
         responsive: true,
-        scales: {
-            y: { beginAtZero: true, title: { display: true, text: 'Report count' } },
-        },
+        scales: { y: { beginAtZero: true, title: { display: true, text: 'Report count' } } },
     };
 
-    const { summary } = useSummary('hourly-' + tag, chartData);
+    /* Claude summary */
+    const { summary } = useSummary(`hourly-${tag}`, chartData);
 
     return (
         <div className="my-10">

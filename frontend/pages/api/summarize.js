@@ -1,49 +1,35 @@
 import { createClient } from '@supabase/supabase-js';
-import Anthropic from '@anthropic-ai/sdk';
-import { EXAMPLES } from '../../utils/examples.js';   // <<— keep prompt tidy
+import { callClaude }   from '../../lib/claude';
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE       // service role key, NOT public
+    process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-const claude = new Anthropic({ apiKey: process.env.CLAUDE_KEY });
 
 export default async function handler(req, res) {
     try {
         const { chartId, data } = req.body;
-        if (!chartId || !data) return res.status(400).json({ error:'no data' });
 
-        const prompt = `
-You are a transit data analyst. Write ≤120-word Markdown insights
-(headline in **bold**, one “Action:” bullet at end).
-Mention spikes (>3× baseline) or correlations (r>0.6) by number.
-Never say “chart” or “JSON”.
+        // 0) cache
+        const { data: cached } = await supabase
+            .from('summaries')
+            .select('summary_md')
+            .eq('chart_id', chartId)
+            .single();
+        if (cached) return res.json(cached);
 
-${EXAMPLES}
+        // 1) Claude
+        const text = await callClaude(data);
 
-NEW chart:
-${JSON.stringify(data).slice(0, 65000)}
-`;
+        // 2) save
+        const { error } = await supabase
+            .from('summaries')
+            .insert({ chart_id: chartId, payload_json: data, summary_md: text });
+        if (error) throw error;
 
-        const msg = await claude.messages.create({
-            model       : 'claude-3-opus-20240229',
-            max_tokens  : 300,
-            temperature : 0.2,
-            system      : 'You output pure Markdown.',
-            messages    : [{ role:'user', content: prompt }],
-        });
-
-        const text = msg.content[0].text;
-
-        await supabase.from('summaries').insert({
-            chart_id     : chartId,
-            payload_json : data,
-            summary_md   : text,
-        });
-
-        res.status(200).json({ summary: text });
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: e.message });
+        res.json({ summary_md: text });
+    } catch (err) {
+        console.error('summarize error', err);
+        res.status(500).json({ error: err.message });
     }
 }
