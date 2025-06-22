@@ -1,104 +1,123 @@
+/*  components/charts/ChartByTagAndEvent.js
+    ----------------------------------------------------
+    Cleanliness vs Event chart  +  Claude insight block
+*/
 import { useEffect, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
-import supabase from '../../lib/supabase';
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale } from 'chart.js';
+import supabase from '../../lib/supabase';
 
-ChartJS.register(BarElement, CategoryScale, LinearScale);
+import useSummary from '../../hooks/useSummary';
+import Markdown   from 'react-markdown';
 
 export default function ChartByTagAndEvent({
-                                               tag = 'cleanliness',
-                                               title = 'Cleanliness Reports: Event Days vs. Spillover vs. Normal'
+                                               tag   = 'cleanliness',
+                                               title = 'Cleanliness Reports: Events vs. Spill-over vs. Baseline',
                                            }) {
     const [chartData, setChartData] = useState(null);
+    const [chartOpts, setChartOpts] = useState(null);
 
+    /* ------------------------------------------------------------------ */
     useEffect(() => {
         (async () => {
             const { data, error } = await supabase
                 .from('reports')
                 .select('created_at, tags, eventNearby');
 
-            if (error) {
-                console.error(error.message);
-                return;
-            }
+            if (error) { console.error(error); return; }
 
-            const cleanlinessByDate = {};
-            const eventDayCounts = {};
-            const nonEventDates = {};
+            /* ---------- crunch numbers (same as before) ---------- */
+            const byDate   = {};
+            const events   = {};
+            const baseline = {};
 
-            // Count total complaints by date
             data.forEach(r => {
-                const date = new Date(r.created_at).toISOString().slice(0, 10);
-                if (r.tags?.includes(tag)) {
-                    cleanlinessByDate[date] = (cleanlinessByDate[date] || 0) + 1;
-                }
+                const date = new Date(r.created_at).toISOString().slice(0,10);
+                if (r.tags?.includes(tag)) byDate[date] = (byDate[date]||0)+1;
             });
 
-            // Track event day + next day spillover
             data.forEach(r => {
-                const event = r.eventNearby;
-                if (!event) return;
-
-                const date = new Date(r.created_at).toISOString().slice(0, 10);
-                const nextDay = new Date(new Date(r.created_at).getTime() + 86400000)
-                    .toISOString()
-                    .slice(0, 10);
-
-                eventDayCounts[date] = {
-                    eventName: event,
-                    dayOf: cleanlinessByDate[date] || 0,
-                    nextDay: cleanlinessByDate[nextDay] || 0,
+                if (!r.eventNearby) return;
+                const date    = new Date(r.created_at).toISOString().slice(0,10);
+                const nextDay = new Date(+new Date(r.created_at)+86_400_000)
+                    .toISOString().slice(0,10);
+                events[date] = {
+                    eventName : r.eventNearby,
+                    dayOf     : byDate[date]    || 0,
+                    nextDay   : byDate[nextDay] || 0,
                 };
             });
 
-            // Build list of dates with no events
-            Object.keys(cleanlinessByDate).forEach(date => {
-                const hadEvent = data.some(
-                    r =>
-                        r.eventNearby &&
-                        new Date(r.created_at).toISOString().slice(0, 10) === date
-                );
-                if (!hadEvent) nonEventDates[date] = cleanlinessByDate[date];
+            Object.keys(byDate).forEach(d => {
+                if (!data.some(r => r.eventNearby &&
+                    new Date(r.created_at).toISOString().slice(0,10) === d))
+                    baseline[d] = byDate[d];
             });
+            const baseAvg = Object.values(baseline)
+                .reduce((a,b)=>a+b,0) / Object.values(baseline).length;
 
-            const nonEventAvg =
-                Object.values(nonEventDates).reduce((a, b) => a + b, 0) /
-                Object.values(nonEventDates).length;
-
-            // Create chart object
-            const labels = Object.keys(eventDayCounts);
-            const chart = {
-                labels: labels.map(d => `${eventDayCounts[d].eventName} (${d})`),
-                datasets: [
-                    {
-                        label: 'Cleanliness Reports — Same Day (Event)',
-                        data: labels.map(d => eventDayCounts[d].dayOf),
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)', // blue
-                    },
-                    {
-                        label: 'Cleanliness Reports — Next Day (Spillover)',
-                        data: labels.map(d => eventDayCounts[d].nextDay),
-                        backgroundColor: 'rgba(255, 159, 64, 0.7)', // orange
-                    },
-                    {
-                        label: 'Avg Non-Event Day',
-                        data: labels.map(() => nonEventAvg.toFixed(2)),
-                        backgroundColor: 'rgba(201, 203, 207, 0.7)', // gray
-                    },
+            /* ---------- build chartData ---------- */
+            const labels = Object.keys(events);
+            const chart  = {
+                labels   : labels.map(k => `${events[k].eventName} (${k})`),
+                datasets : [
+                    { label:'Same-Day (event)',
+                        data : labels.map(k => events[k].dayOf),
+                        backgroundColor:'rgba(54,162,235,0.7)' },
+                    { label:'Next-Day (spill-over)',
+                        data : labels.map(k => events[k].nextDay),
+                        backgroundColor:'rgba(255,159,64,0.7)' },
+                    { label:'Baseline avg',
+                        data : labels.map(()=>baseAvg.toFixed(2)),
+                        backgroundColor:'rgba(201,203,207,0.7)' },
+                    { label:'% Above Baseline',
+                        data : labels.map(k =>
+                            (((events[k].dayOf||0)/baseAvg)-1)*100),
+                        type:'line', borderColor:'#ff6384',
+                        borderWidth:2, yAxisID:'y2', pointRadius:3 },
                 ],
             };
 
+            const opts = {
+                responsive:true,
+                scales:{
+                    y : { beginAtZero:true,
+                        title:{display:true,text:'Complaint count'} },
+                    y2: { position:'right', grid:{drawOnChartArea:false},
+                        ticks:{ callback:v=>v+'%' },
+                        title:{display:true,text:'% above baseline'} },
+                },
+                plugins:{
+                    datalabels:{ formatter:(v,c)=>
+                            c.dataset.type==='line'?v.toFixed(0)+'%':null,
+                        color:'#ff6384', font:{weight:'bold'} },
+                },
+            };
+
             setChartData(chart);
+            setChartOpts(opts);
         })();
     }, [tag]);
+    /* ------------------------------------------------------------------ */
+
+    /* ---------- Claude insight (one-liner) ---------- */
+    const { summary } = useSummary('event-cleanliness', chartData);
 
     return (
         <div className="my-10">
             <h2 className="text-lg font-semibold mb-2">{title}</h2>
-            <p className="text-sm text-gray-600 mb-2">
-                🟦 Same Day · 🟧 Next Day Spillover · 🟪 Avg. Non-Event Days
-            </p>
-            {chartData ? <Bar data={chartData} /> : <p>Loading chart...</p>}
+            {chartData && chartOpts ? (
+                <>
+                    <Bar data={chartData} options={chartOpts} />
+                    {summary && (
+                        <div className="prose prose-sm bg-neutral-50 p-4 rounded-lg mt-4">
+                            <Markdown>{summary}</Markdown>
+                        </div>
+                    )}
+                </>
+            ) : (
+                <p>Loading chart…</p>
+            )}
         </div>
     );
 }

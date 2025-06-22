@@ -8,8 +8,6 @@ import ChartByTagAndTemp from '../../components/charts/ChartByTagAndTemp';
 import ChartByTagAndHour from '../../components/charts/ChartByTagAndHour';
 import ChartByTagAndEvent from '../../components/charts/ChartByTagAndEvent';
 
-ChartJS.register(BarElement, CategoryScale, LinearScale);
-
 function countBy(array, key) {
     const counts = {};
     array.forEach(item => {
