@@ -9,7 +9,7 @@ create table reports (
                          id uuid primary key default gen_random_uuid (),
                          text text,
                          tags text[],
-                         embedding vector (1536), -- assuming OpenAI/Claude embeddings
+                         embedding vector (3072), -- assuming OpenAI/Claude embeddings
                          location text,
                          stop_name text,
                          agency text,
