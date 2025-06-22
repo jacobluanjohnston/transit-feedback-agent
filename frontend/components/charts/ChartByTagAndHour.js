@@ -1,29 +1,24 @@
-/*  components/charts/ChartByTagAndHour.js
-    ————————————————————————————————————————————
-    Delay counts by hour (Weekday vs Weekend) + Claude summary
+/* components/charts/ChartByTagAndHour.js
+   ---------------------------------------------------------
+   Bar chart of reports by hour (weekday vs weekend) + Claude summary
+   • Hours are calculated in **UTC** so SQL counts line up.
+   • No annotation plugin to avoid crashes.
 */
+
 import { useEffect, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
-import supabase from '../../lib/supabase';
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale } from 'chart.js';
+import supabase from '../../lib/supabase';
 
 import useSummary from '../../hooks/useSummary';
 import Markdown   from 'react-markdown';
 
-/* shade rush-hour bands */
-const rushBand = (xMin, xMax) => ({
-    type        : 'box',
-    xMin, xMax,
-    yMin        : 0,          // bottom of chart
-    yMax        : 'max',      // plugin treats "max" as top
-    backgroundColor : 'rgba(0,0,0,0.05)',
-    borderWidth : 0,
-    label       : { enabled: false }   // ← prevents the crash
-
-});
-
-export default function ChartByTagAndHour({ tag='delay', title, days }) {
-    const [dataMap, setDataMap] = useState({ weekday:{}, weekend:{} });
+export default function ChartByTagAndHour({
+                                              tag   = 'delay',
+                                              title = 'Harassment Reports by Hour',
+                                              days  // optional [0–6] filter
+                                          }) {
+    const [dataMap, setDataMap] = useState({ weekday: {}, weekend: {} });
 
     useEffect(() => {
         (async () => {
@@ -31,44 +26,50 @@ export default function ChartByTagAndHour({ tag='delay', title, days }) {
                 .from('reports')
                 .select('created_at, tags');
 
-            if (error) return console.error(error);
+            if (error) { console.error(error); return; }
 
-            const week   = {}, weekEnd = {};
-            const filt   = days ? data.filter(d => days.includes(new Date(d.created_at).getDay())) : data;
+            const weekday = {}, weekend = {};
+            (days ? data.filter(r => days.includes(new Date(r.created_at).getUTCDay())) : data)
+                .forEach(r => {
+                    const tagged = Array.isArray(r.tags) &&
+                        r.tags.some(t => t.toLowerCase() === tag.toLowerCase());
+                    if (!tagged) return;
 
-            filt.forEach(r => {
-                const tagged  = Array.isArray(r.tags) && r.tags.some(t=>t.toLowerCase()===tag);
-                if (!tagged) return;
+                    const hr = new Date(r.created_at).getUTCHours();   // UTC hour
+                    const isWE = [0, 6].includes(new Date(r.created_at).getUTCDay());
+                    const bucket = isWE ? weekend : weekday;
+                    bucket[hr] = (bucket[hr] || 0) + 1;
+                });
 
-                const hr      = new Date(r.created_at).getHours();
-                const isWE    = [0,6].includes(new Date(r.created_at).getDay());
-                const bucket  = isWE ? weekEnd : week;
-                bucket[hr]    = (bucket[hr] || 0) + 1;
-            });
-
-            setDataMap({ weekday:week, weekend:weekEnd });
+            setDataMap({ weekday, weekend });
         })();
     }, [tag, days]);
 
     const hours = [...Array(24).keys()];
     const chartData = {
-        labels  : hours.map(h=>`${h}:00`),
+        labels: hours.map(h => `${h}:00`),
         datasets: [
-            { label:'Weekday', data:hours.map(h=>dataMap.weekday[h]||0),
-                backgroundColor:'rgba(54,162,235,0.7)' },
-            { label:'Weekend', data:hours.map(h=>dataMap.weekend[h]||0),
-                backgroundColor:'rgba(201,203,207,0.7)' },
+            {
+                label: 'Weekday',
+                data: hours.map(h => dataMap.weekday[h] || 0),
+                backgroundColor: 'rgba(54,162,235,0.7)',
+            },
+            {
+                label: 'Weekend',
+                data: hours.map(h => dataMap.weekend[h] || 0),
+                backgroundColor: 'rgba(201,203,207,0.7)',
+            },
         ],
     };
+
     const chartOpts = {
-        responsive:true,
-        // plugins:{ annotation:{ annotations:{
-        //             morning:rushBand(7,9.5), evening:rushBand(16,18.5) } } },
-        scales  :{ y:{ beginAtZero:true, title:{display:true,text:'Delay reports'} } },
+        responsive: true,
+        scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Report count' } },
+        },
     };
 
-    /* Claude insight */
-    const { summary } = useSummary('rush-hour-delay', chartData);
+    const { summary } = useSummary('hourly-' + tag, chartData);
 
     return (
         <div className="my-10">
