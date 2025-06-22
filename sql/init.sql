@@ -16,3 +16,9 @@ create table reports (
                          route_id text,
                          created_at timestamptz default now()
 );
+
+create table analytics_summary (
+                                   id uuid primary key default gen_random_uuid(),
+                                   created_at timestamptz default now(),
+                                   summary text
+);
