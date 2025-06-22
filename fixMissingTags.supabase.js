@@ -14,7 +14,7 @@ const supabase = createClient(
 
     const { data: reports, error } = await supabase
         .from(TABLE)
-        .select('id, text')
+        .select('id, complaint')
         .or('tags.is.null,tags.eq.{}');
 
     if (error) return console.error('❌ Fetch error:', error.message);
@@ -22,7 +22,7 @@ const supabase = createClient(
 
     for (const r of reports) {
         try {
-            const tags = await tagWithClaude(r.text);
+            const tags = await tagWithClaude(r.complaint);
             await supabase.from(TABLE).update({ tags }).eq('id', r.id);
             console.log('🆕', r.id, '→', tags);
         } catch (e) {

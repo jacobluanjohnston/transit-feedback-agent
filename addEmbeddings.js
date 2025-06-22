@@ -24,9 +24,9 @@ async function getEmbedding(text) {
 (async () => {
     const { data: reports, error } = await supabase
         .from(TABLE)
-        .select('id, text')
+        .select('id, complaint')
         .is('embedding', null)
-        .limit(1000);                // safety cap
+        .limit(1000);
 
     if (error) {
         console.error('❌ Fetch error:', error.message);
@@ -39,7 +39,7 @@ async function getEmbedding(text) {
 
     for (const r of reports) {
         try {
-            const vec = await getEmbedding(r.text);
+            const vec = await getEmbedding(r.complaint);
             const { error: updErr } = await supabase
                 .from(TABLE)
                 .update({ embedding: vec })
