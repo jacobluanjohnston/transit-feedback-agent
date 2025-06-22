@@ -3,6 +3,10 @@ import Layout from '../../components/Layout';
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import supabase from '../../lib/supabase';
+import ChartByTagAndStop from '../../components/charts/ChartByTagAndStop';
+import ChartByTagAndTemp from '../../components/charts/ChartByTagAndTemp';
+import ChartByTagAndHour from '../../components/charts/ChartByTagAndHour';
+import ChartByTagAndEvent from '../../components/charts/ChartByTagAndEvent';
 
 ChartJS.register(BarElement, CategoryScale, LinearScale);
 
@@ -70,6 +74,26 @@ export default function ChartsPage() {
             <h1 className="text-2xl font-bold mb-6">📊 Transit Analytics</h1>
 
             <div className="space-y-10">
+                <ChartByTagAndStop
+                    tag="harassment"
+                    title="Harassment Reports by Stop"
+                />
+
+                <ChartByTagAndTemp
+                    tag="equipment_issue"
+                    title="Equipment Failures by Temperature"
+                />
+
+                <ChartByTagAndHour
+                    tag="delay"
+                    title="Delays on Routes by Hour"
+                />
+
+                <ChartByTagAndEvent
+                    tag="cleanliness"
+                    title="Cleanliness Reports: Events vs. Next Day vs. Baseline"
+                />
+
                 <div>
                     <h2 className="text-xl font-semibold mb-2">Tag Frequency</h2>
                     <Bar data={buildChartData(tagCounts, 'Tag Frequency')} />
