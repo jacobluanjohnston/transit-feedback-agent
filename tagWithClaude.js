@@ -34,10 +34,14 @@ Guidelines:
 - Do not make up tags. Only use the ones from the list.
 
 👉 Tagging rules:
+- If the report mentions elevators, ramps, or wheelchair access, always include \'"accessibility"\'.
+- If it mentions broken elevators/escalators, include both \'"equipment_issue"\' and \'"accessibility"\'.
 - If someone mentions **lateness**, use \`"delay"\` AND \`"punctuality"\`.
 - If someone says the vehicle **left too early**, use \`"early_departure"\` AND \`"punctuality"\`.
 - If someone mentions **driver attitude or behavior**, use \`"driver_issue"\`.
 - If a report includes illegal or violent behavior, always include \`"crime"\`.
+- If it mentions a mess (trash, smells, unclean), include \'"cleanliness"\'.
+- If it talks about danger, broken lights, platform chaos, include \'"safety"\'.
 - If someone is **threatened or followed**, include \`"harassment"\` even if it's not violent.
 - If the issue involves **racial, gender, or disability bias**, include \`"discrimination"\`.
 - Use multiple tags if appropriate. For example, a complaint about a rude driver who left early should include:  
