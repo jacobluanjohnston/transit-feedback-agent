@@ -54,6 +54,21 @@ app.post('/submit', async (req, res) => {
     }
 });
 
+// Admin route
+app.get('/admin/reports', async (req, res) => {
+    const { data, error } = await supabase
+        .from('reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('❌ Failed to fetch reports:', error);
+        return res.status(500).json({ error: 'Failed to fetch reports' });
+    }
+
+    res.json(data);
+});
+
 // Fallback route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'index.html'));

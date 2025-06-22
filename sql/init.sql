@@ -1,3 +1,6 @@
+-- For dropping
+-- drop table reports;
+
 -- Enable pgvector
 create extension if not exists vector;
 
@@ -11,5 +14,5 @@ create table reports (
                          stop_name text,
                          agency text,
                          route_id text,
-                         timestamp timestamptz default now()
+                         created_at timestamptz default now()
 );

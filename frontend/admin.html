@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+</head>
+<body>
+<h1>Transit Feedback Reports</h1>
+<button onclick="downloadCSV()">📥 Export CSV</button>
+<table border="1" id="reportsTable">
+    <thead>
+    <tr>
+        <th>Text</th>
+        <th>Tags</th>
+        <th>Location</th>
+        <th>Agency</th>
+        <th>Date</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+    async function fetchReports() {
+        const res = await fetch('/admin/reports');
+        const data = await res.json();
+        const tableBody = document.querySelector('#reportsTable tbody');
+        tableBody.innerHTML = '';
+        data.forEach(r => {
+            const row = `<tr>
+          <td>${r.text}</td>
+          <td>${r.tags?.join(', ')}</td>
+          <td>${r.location}</td>
+          <td>${r.agency}</td>
+          <td>${new Date(r.created_at).toLocaleString()}</td>
+        </tr>`;
+            tableBody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+
+    async function downloadCSV() {
+        const res = await fetch('/admin/reports');
+        const data = await res.json();
+        const headers = ["Text", "Tags", "Location", "Agency", "Date"];
+        const rows = data.map(r => [
+            `"${r.text}"`,
+            `"${r.tags?.join(', ')}"`,
+            `"${r.location}"`,
+            `"${r.agency}"`,
+            `"${r.created_at}"`
+        ]);
+        const csv = [headers, ...rows].map(e => e.join(",")).join("\n");
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'reports.csv';
+        link.click();
+    }
+
+    fetchReports();
+</script>
+</body>
+</html>
