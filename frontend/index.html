@@ -5,7 +5,7 @@
 </head>
 <body>
 <h1>Submit Transit Feedback</h1>
-<form id="feedbackForm">
+<form id="feedback-form">
     <label for="text">Issue:</label><br>
     <textarea id="text" name="text" rows="4" cols="50"></textarea><br>
 
@@ -18,29 +18,58 @@
     <button type="submit">Submit</button>
 </form>
 
-<pre id="result"></pre>
+<div id="result" style="margin-top: 20px;"></div>
 
 <script>
-    document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
+    const form = document.getElementById('feedback-form');
+    const resultDiv = document.getElementById('result');
+
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const payload = {
-            text: document.getElementById('text').value,
-            location: document.getElementById('location').value,
-            agency: document.getElementById('agency').value
-        };
+        const text = document.getElementById('text').value;
+        const location = document.getElementById('location').value;
+        const agency = document.getElementById('agency').value;
 
-        const res = await fetch('http://localhost:3000/submit', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
+        try {
+            const response = await fetch('/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text, location, agency })
+            });
 
-        const result = await res.json();
-        document.getElementById('result').textContent = JSON.stringify(result, null, 2);
+            const data = await response.json();
+
+            // 🟢 Show submission feedback
+            let html = `<p>✅ <strong>${data.message}</strong></p>`;
+
+            // 🏷️ Show tags
+            if (data.tags?.length) {
+                html += `<p><strong>Tags:</strong> ${data.tags.join(', ')}</p>`;
+            }
+
+            // 🔁 Show similar reports
+            if (data.similar_reports?.length) {
+                html += `<p><strong>Similar Complaints:</strong></p><ul>`;
+                data.similar_reports.slice(0, 3).forEach(report => {
+                    html += `<li>
+            <em>${report.text}</em><br/>
+            <small>${report.tags?.join(', ')}</small>
+          </li>`;
+                });
+                html += `</ul>`;
+            }
+
+            resultDiv.innerHTML = html;
+            form.reset();
+        } catch (err) {
+            console.error(err);
+            resultDiv.innerHTML = `<p style="color: red;">❌ Failed to submit report.</p>`;
+        }
     });
 </script>
+
 </body>
 </html>
