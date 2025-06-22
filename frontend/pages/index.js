@@ -9,7 +9,7 @@ export default function Home() {
         (async () => {
             const { data, error } = await supabase
                 .from('reports')
-                .select('id, text, tags, created_at')
+                .select('id, complaint, tags, created_at')
                 .order('created_at', { ascending: false })
                 .limit(100);
 

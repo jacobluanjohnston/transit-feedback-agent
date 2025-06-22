@@ -16,6 +16,9 @@ ${EXAMPLES}
 
 ────────────────────────────────────────
 You are a senior transit-operations analyst.
+IMPORTANT: Buckets for hours 0–4 represent non-service time.  
+• **Ignore those buckets when finding patterns or anomalies.**  
+• Do NOT conclude “no reports at any hour” just because 0–4 are zero.
 
 1. Benchmark each series against the *expected* pattern (ridership curve, service hours, seasonal weather comfort zone).  
 2. Highlight **anomalies**: spikes, dips, adjacent-station bleed-over, weekday/weekend inversions, temperature-bias artefacts, etc.  
